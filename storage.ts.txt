@@ -1,0 +1,199 @@
+import {
+  User,
+  InsertUser,
+  Student,
+  InsertStudent,
+  Subject,
+  InsertSubject,
+  MentalHealthTip,
+  InsertMentalHealthTip,
+  Achievement,
+  InsertAchievement,
+  users,
+  students,
+  subjects,
+  mentalHealthTips,
+  achievements
+} from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+
+// Modify the interface with any CRUD methods
+// you might need
+export interface IStorage {
+  // User methods
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+
+  // Student methods
+  getStudent(id: number): Promise<Student | undefined>;
+  getStudentByUsn(usn: string): Promise<Student | undefined>;
+  createStudent(student: InsertStudent): Promise<Student>;
+  getAllStudents(): Promise<Student[]>;
+
+  // Subject methods
+  getSubject(id: number): Promise<Subject | undefined>;
+  getSubjectsByStudentId(studentId: number): Promise<Subject[]>;
+  createSubject(subject: InsertSubject): Promise<Subject>;
+  deleteSubjectsByStudentId(studentId: number): Promise<void>;
+
+  // Mental Health Tips methods
+  getMentalHealthTip(id: number): Promise<MentalHealthTip | undefined>;
+  getAllMentalHealthTips(): Promise<MentalHealthTip[]>;
+  createMentalHealthTip(tip: InsertMentalHealthTip): Promise<MentalHealthTip>;
+
+  // Achievement methods
+  getAchievement(id: number): Promise<Achievement | undefined>;
+  getAchievementsByStudentId(studentId: number): Promise<Achievement[]>;
+  createAchievement(achievement: InsertAchievement): Promise<Achievement>;
+  updateAchievement(id: number, achievement: Partial<Achievement>): Promise<Achievement>;
+}
+
+export class DatabaseStorage implements IStorage {
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  // Student methods
+  async getStudent(id: number): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    return student;
+  }
+
+  async getStudentByUsn(usn: string): Promise<Student | undefined> {
+    const [student] = await db.select().from(students).where(eq(students.usn, usn));
+    return student;
+  }
+
+  async createStudent(insertStudent: InsertStudent): Promise<Student> {
+    const [student] = await db.insert(students).values(insertStudent).returning();
+    return student;
+  }
+
+  async getAllStudents(): Promise<Student[]> {
+    return db.select().from(students);
+  }
+
+  // Subject methods
+  async getSubject(id: number): Promise<Subject | undefined> {
+    const [subject] = await db.select().from(subjects).where(eq(subjects.id, id));
+    return subject;
+  }
+
+  async getSubjectsByStudentId(studentId: number): Promise<Subject[]> {
+    return db.select().from(subjects).where(eq(subjects.studentId, studentId));
+  }
+
+  async createSubject(insertSubject: InsertSubject): Promise<Subject> {
+    const [subject] = await db.insert(subjects).values(insertSubject).returning();
+    return subject;
+  }
+
+  async deleteSubjectsByStudentId(studentId: number): Promise<void> {
+    await db.delete(subjects).where(eq(subjects.studentId, studentId));
+  }
+
+  // Mental Health Tips methods
+  async getMentalHealthTip(id: number): Promise<MentalHealthTip | undefined> {
+    const [tip] = await db.select().from(mentalHealthTips).where(eq(mentalHealthTips.id, id));
+    return tip;
+  }
+
+  async getAllMentalHealthTips(): Promise<MentalHealthTip[]> {
+    const tips = await db.select().from(mentalHealthTips);
+    if (tips.length === 0) {
+      // Initialize with some mental health tips if none exist
+      await this.initializeMentalHealthTips();
+      return db.select().from(mentalHealthTips);
+    }
+    return tips;
+  }
+
+  async createMentalHealthTip(tip: InsertMentalHealthTip): Promise<MentalHealthTip> {
+    const [mentalHealthTip] = await db.insert(mentalHealthTips).values(tip).returning();
+    return mentalHealthTip;
+  }
+
+  // Achievement methods
+  async getAchievement(id: number): Promise<Achievement | undefined> {
+    const [achievement] = await db.select().from(achievements).where(eq(achievements.id, id));
+    return achievement;
+  }
+
+  async getAchievementsByStudentId(studentId: number): Promise<Achievement[]> {
+    return db.select().from(achievements).where(eq(achievements.studentId, studentId));
+  }
+
+  async createAchievement(insertAchievement: InsertAchievement): Promise<Achievement> {
+    const [achievement] = await db.insert(achievements).values({
+      ...insertAchievement,
+      completedAt: insertAchievement.isCompleted ? new Date() : null
+    }).returning();
+    return achievement;
+  }
+
+  async updateAchievement(id: number, achievementUpdate: Partial<Achievement>): Promise<Achievement> {
+    const [achievement] = await db.select().from(achievements).where(eq(achievements.id, id));
+    
+    if (!achievement) {
+      throw new Error(`Achievement with id ${id} not found`);
+    }
+    
+    const [updatedAchievement] = await db.update(achievements)
+      .set({
+        ...achievementUpdate,
+        completedAt: achievementUpdate.isCompleted ? new Date() : achievement.completedAt
+      })
+      .where(eq(achievements.id, id))
+      .returning();
+    
+    return updatedAchievement;
+  }
+
+  // Helper methods
+  private async initializeMentalHealthTips(): Promise<void> {
+    const tips: InsertMentalHealthTip[] = [
+      {
+        title: "Mindful Study Breaks",
+        content: "Take regular 5-minute breaks during study sessions. Use this time to stretch, practice deep breathing, or simply rest your eyes from screens.",
+        category: "Study",
+        icon: "brain"
+      },
+      {
+        title: "Physical Activity",
+        content: "Even 20 minutes of physical activity can boost your mood and cognitive function. Try a quick walk between classes or a short workout before studying.",
+        category: "Health",
+        icon: "leaf"
+      },
+      {
+        title: "Sleep Hygiene",
+        content: "Aim for 7-9 hours of quality sleep. Create a bedtime routine that includes reducing screen time before bed and keeping a consistent sleep schedule.",
+        category: "Health",
+        icon: "bed"
+      },
+      {
+        title: "Social Connection",
+        content: "Don't isolate yourself during stressful academic periods. Schedule regular time with friends and family, even if just for a short coffee break or video call.",
+        category: "Social",
+        icon: "user-friends"
+      }
+    ];
+
+    await db.insert(mentalHealthTips).values(tips);
+  }
+}
+
+export const storage = new DatabaseStorage();

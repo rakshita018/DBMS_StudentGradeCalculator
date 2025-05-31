@@ -1,0 +1,177 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { ZodError } from "zod";
+import { gradeCalculatorSchema, insertSubjectSchema } from "@shared/schema";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // prefix all routes with /api
+  const apiRouter = app.route("/api");
+
+  // Student and grade calculator routes
+  app.post("/api/students", async (req, res) => {
+    try {
+      const formData = gradeCalculatorSchema.parse(req.body);
+      
+      // Check if student with same USN already exists
+      const existingStudent = await storage.getStudentByUsn(formData.usn);
+      let student = existingStudent;
+      
+      if (existingStudent) {
+        // Delete existing subjects for this student
+        await storage.deleteSubjectsByStudentId(existingStudent.id);
+      } else {
+        // Create new student
+        student = await storage.createStudent({
+          name: formData.name,
+          usn: formData.usn,
+          className: formData.className,
+          semester: formData.semester,
+          stream: formData.stream,
+          userId: null // No user association for now
+        });
+      }
+
+      // Create subjects for the student
+      const subjects = await Promise.all(
+        formData.subjects.map(subject => {
+          const isPassing = subject.marks >= 35; // Pass threshold is 35
+          return storage.createSubject({
+            name: subject.name,
+            studentId: student!.id,
+            marks: subject.marks,
+            isPassing,
+            semester: formData.semester
+          });
+        })
+      );
+
+      res.status(201).json({ 
+        student, 
+        subjects,
+        summary: {
+          totalMarks: subjects.reduce((sum, subject) => sum + subject.marks, 0),
+          averageMarks: subjects.reduce((sum, subject) => sum + subject.marks, 0) / subjects.length,
+          passCount: subjects.filter(s => s.isPassing).length,
+          failCount: subjects.filter(s => !s.isPassing).length,
+          overallStatus: subjects.every(s => s.isPassing) ? "Pass" : "Fail"
+        }
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      } else {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.get("/api/students/:id", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.id);
+      const student = await storage.getStudent(studentId);
+      
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      const subjects = await storage.getSubjectsByStudentId(studentId);
+      
+      res.json({ 
+        student,
+        subjects,
+        summary: subjects.length > 0 ? {
+          totalMarks: subjects.reduce((sum, subject) => sum + subject.marks, 0),
+          averageMarks: subjects.reduce((sum, subject) => sum + subject.marks, 0) / subjects.length,
+          passCount: subjects.filter(s => s.isPassing).length,
+          failCount: subjects.filter(s => !s.isPassing).length,
+          overallStatus: subjects.every(s => s.isPassing) ? "Pass" : "Fail"
+        } : null
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/students", async (req, res) => {
+    try {
+      const students = await storage.getAllStudents();
+      
+      // For each student, get their subjects and calculate summaries
+      const studentsWithDetails = await Promise.all(
+        students.map(async (student) => {
+          const subjects = await storage.getSubjectsByStudentId(student.id);
+          
+          return {
+            student,
+            subjects,
+            summary: subjects.length > 0 ? {
+              totalMarks: subjects.reduce((sum, subject) => sum + subject.marks, 0),
+              averageMarks: subjects.reduce((sum, subject) => sum + subject.marks, 0) / subjects.length,
+              passCount: subjects.filter(s => s.isPassing).length,
+              failCount: subjects.filter(s => !s.isPassing).length,
+              overallStatus: subjects.every(s => s.isPassing) ? "Pass" : "Fail"
+            } : null
+          };
+        })
+      );
+      
+      res.json(studentsWithDetails);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Mental health tips routes
+  app.get("/api/mental-health-tips", async (req, res) => {
+    try {
+      const tips = await storage.getAllMentalHealthTips();
+      res.json(tips);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Achievement routes
+  app.get("/api/achievements/student/:studentId", async (req, res) => {
+    try {
+      const studentId = parseInt(req.params.studentId);
+      const achievements = await storage.getAchievementsByStudentId(studentId);
+      res.json(achievements);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/achievements", async (req, res) => {
+    try {
+      const achievement = await storage.createAchievement(req.body);
+      res.status(201).json(achievement);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/achievements/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedAchievement = await storage.updateAchievement(id, req.body);
+      res.json(updatedAchievement);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

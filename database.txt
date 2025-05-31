@@ -1,0 +1,153 @@
+-- Student Grade Calculator Database Schema
+-- PostgreSQL Database Structure
+
+-- 1. Users Table (for authentication)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL
+);
+
+-- 2. Students Table (main student information)
+CREATE TABLE students (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    usn TEXT NOT NULL UNIQUE,
+    className TEXT NOT NULL,
+    semester TEXT NOT NULL,
+    stream TEXT NOT NULL,
+    userId INTEGER REFERENCES users(id),
+    createdAt TIMESTAMP DEFAULT NOW()
+);
+
+-- 3. Subjects Table (individual subject marks for each student)
+CREATE TABLE subjects (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    studentId INTEGER REFERENCES students(id) NOT NULL,
+    marks INTEGER NOT NULL,
+    isPassing BOOLEAN NOT NULL,
+    semester TEXT NOT NULL,
+    createdAt TIMESTAMP DEFAULT NOW()
+);
+
+-- 4. Mental Health Tips Table (wellness content for students)
+CREATE TABLE mentalHealthTips (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    category TEXT NOT NULL,
+    icon TEXT NOT NULL
+);
+
+-- 5. Achievements Table (gamification features)
+CREATE TABLE achievements (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    xpValue INTEGER NOT NULL,
+    studentId INTEGER REFERENCES students(id),
+    isCompleted BOOLEAN DEFAULT FALSE,
+    completedAt TIMESTAMP
+);
+
+-- Indexes for better performance
+CREATE INDEX idx_students_usn ON students(usn);
+CREATE INDEX idx_subjects_student_id ON subjects(studentId);
+CREATE INDEX idx_achievements_student_id ON achievements(studentId);
+CREATE INDEX idx_students_created_at ON students(createdAt);
+
+-- Sample Data for Mental Health Tips
+INSERT INTO mentalHealthTips (title, content, category, icon) VALUES
+('Mindful Study Breaks', 'Take regular 5-minute breaks during study sessions. Use this time to stretch, practice deep breathing, or simply rest your eyes from screens.', 'Study', 'brain'),
+('Physical Activity', 'Even 20 minutes of physical activity can boost your mood and cognitive function. Try a quick walk between classes or a short workout before studying.', 'Health', 'leaf'),
+('Sleep Hygiene', 'Aim for 7-9 hours of quality sleep. Create a bedtime routine that includes reducing screen time before bed and keeping a consistent sleep schedule.', 'Health', 'bed'),
+('Social Connection', 'Don''t isolate yourself during stressful academic periods. Schedule regular time with friends and family, even if just for a short coffee break or video call.', 'Social', 'user-friends'),
+('Time Management', 'Use the Pomodoro Technique: 25 minutes of focused study followed by a 5-minute break. This helps maintain concentration and prevents burnout.', 'Study', 'clock'),
+('Stress Relief', 'Practice progressive muscle relaxation or meditation for 10 minutes daily. Apps like Headspace or Calm can guide you through these exercises.', 'Health', 'leaf'),
+('Nutrition for Brain Health', 'Eat brain-boosting foods like blueberries, nuts, fish, and dark leafy greens. Stay hydrated and avoid excessive caffeine during study sessions.', 'Health', 'heart'),
+('Goal Setting', 'Break large academic goals into smaller, manageable tasks. Celebrate small victories to maintain motivation throughout the semester.', 'Study', 'target');
+
+-- Sample Student Data
+INSERT INTO students (name, usn, className, semester, stream, userId) VALUES
+('John Doe', '1BM20CS001', '3rd Year CSE', '6th Semester', 'Computer Science', NULL),
+('Jane Smith', '1BM20EC002', '2nd Year ECE', '4th Semester', 'Electronics', NULL),
+('Mike Johnson', '1BM21ME003', '1st Year ME', '2nd Semester', 'Mechanical', NULL);
+
+-- Sample Subject Data for John Doe (student ID 1)
+INSERT INTO subjects (name, studentId, marks, isPassing, semester) VALUES
+('Data Structures', 1, 85, TRUE, '6th Semester'),
+('Operating Systems', 1, 78, TRUE, '6th Semester'),
+('Database Management', 1, 92, TRUE, '6th Semester'),
+('Computer Networks', 1, 76, TRUE, '6th Semester'),
+('Software Engineering', 1, 88, TRUE, '6th Semester');
+
+-- Sample Subject Data for Jane Smith (student ID 2)
+INSERT INTO subjects (name, studentId, marks, isPassing, semester) VALUES
+('Digital Electronics', 2, 82, TRUE, '4th Semester'),
+('Signals and Systems', 2, 74, TRUE, '4th Semester'),
+('Microprocessors', 2, 79, TRUE, '4th Semester'),
+('Communication Systems', 2, 86, TRUE, '4th Semester'),
+('Control Systems', 2, 81, TRUE, '4th Semester');
+
+-- Sample Achievement Data
+INSERT INTO achievements (title, description, icon, xpValue, studentId, isCompleted, completedAt) VALUES
+('First Grade Calculator', 'Complete your first grade calculation', 'calculator', 50, 1, TRUE, NOW()),
+('Perfect Score', 'Score 90% or above in at least one subject', 'award', 100, 1, TRUE, NOW()),
+('Consistent Performer', 'Pass all subjects in a semester', 'star', 150, 1, TRUE, NOW()),
+('Study Streak', 'Study for 7 consecutive days', 'fire', 200, 1, FALSE, NULL),
+('Mental Health Advocate', 'Use mental health tips feature 5 times', 'heart', 75, 1, FALSE, NULL);
+
+-- Views for commonly used data combinations
+CREATE VIEW student_summary AS
+SELECT 
+    s.id,
+    s.name,
+    s.usn,
+    s.className,
+    s.semester,
+    s.stream,
+    COUNT(sub.id) as total_subjects,
+    AVG(sub.marks) as average_marks,
+    SUM(sub.marks) as total_marks,
+    COUNT(CASE WHEN sub.isPassing = true THEN 1 END) as passed_subjects,
+    COUNT(CASE WHEN sub.isPassing = false THEN 1 END) as failed_subjects,
+    CASE 
+        WHEN COUNT(CASE WHEN sub.isPassing = false THEN 1 END) = 0 THEN 'Pass'
+        ELSE 'Fail'
+    END as overall_status
+FROM students s
+LEFT JOIN subjects sub ON s.id = sub.studentId
+GROUP BY s.id, s.name, s.usn, s.className, s.semester, s.stream;
+
+-- Function to calculate grade based on marks
+CREATE OR REPLACE FUNCTION calculate_grade(marks INTEGER) 
+RETURNS TEXT AS $$
+BEGIN
+    CASE 
+        WHEN marks >= 90 THEN RETURN 'A+';
+        WHEN marks >= 80 THEN RETURN 'A';
+        WHEN marks >= 70 THEN RETURN 'B+';
+        WHEN marks >= 60 THEN RETURN 'B';
+        WHEN marks >= 50 THEN RETURN 'C+';
+        WHEN marks >= 40 THEN RETURN 'C';
+        WHEN marks >= 35 THEN RETURN 'D';
+        ELSE RETURN 'F';
+    END CASE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically set isPassing flag based on marks
+CREATE OR REPLACE FUNCTION set_passing_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.isPassing := (NEW.marks >= 35);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_set_passing_status
+    BEFORE INSERT OR UPDATE ON subjects
+    FOR EACH ROW
+    EXECUTE FUNCTION set_passing_status();

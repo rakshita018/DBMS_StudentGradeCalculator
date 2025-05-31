@@ -1,0 +1,122 @@
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Users table remains the same as provided in the starter
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+});
+
+// New tables for student grade calculator
+export const students = pgTable("students", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  usn: text("usn").notNull().unique(),
+  className: text("className").notNull(),
+  semester: text("semester").notNull(),
+  stream: text("stream").notNull(),
+  userId: integer("userId").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+export const insertStudentSchema = createInsertSchema(students).pick({
+  name: true,
+  usn: true,
+  className: true,
+  semester: true,
+  stream: true,
+  userId: true,
+});
+
+export const subjects = pgTable("subjects", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  studentId: integer("studentId").references(() => students.id).notNull(),
+  marks: integer("marks").notNull(),
+  isPassing: boolean("isPassing").notNull(),
+  semester: text("semester").notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+
+export const insertSubjectSchema = createInsertSchema(subjects).pick({
+  name: true,
+  studentId: true,
+  marks: true,
+  isPassing: true,
+  semester: true,
+});
+
+export const mentalHealthTips = pgTable("mentalHealthTips", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  category: text("category").notNull(),
+  icon: text("icon").notNull(),
+});
+
+export const insertMentalHealthTipSchema = createInsertSchema(mentalHealthTips).pick({
+  title: true,
+  content: true,
+  category: true,
+  icon: true,
+});
+
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(),
+  xpValue: integer("xpValue").notNull(),
+  studentId: integer("studentId").references(() => students.id),
+  isCompleted: boolean("isCompleted").default(false),
+  completedAt: timestamp("completedAt"),
+});
+
+export const insertAchievementSchema = createInsertSchema(achievements).pick({
+  title: true,
+  description: true,
+  icon: true,
+  xpValue: true,
+  studentId: true,
+  isCompleted: true,
+});
+
+// Type definitions
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+export type InsertStudent = z.infer<typeof insertStudentSchema>;
+export type Student = typeof students.$inferSelect;
+
+export type InsertSubject = z.infer<typeof insertSubjectSchema>;
+export type Subject = typeof subjects.$inferSelect;
+
+export type InsertMentalHealthTip = z.infer<typeof insertMentalHealthTipSchema>;
+export type MentalHealthTip = typeof mentalHealthTips.$inferSelect;
+
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+export type Achievement = typeof achievements.$inferSelect;
+
+// Grade calculator form with validation
+export const gradeCalculatorSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  usn: z.string().min(1, "USN is required"),
+  className: z.string().min(1, "Class is required"),
+  semester: z.string().min(1, "Semester is required"),
+  stream: z.string().min(1, "Stream is required"),
+  subjects: z.array(
+    z.object({
+      name: z.string().min(1, "Subject name is required"),
+      marks: z.number().min(0, "Marks cannot be negative").max(100, "Marks cannot exceed 100")
+    })
+  ).min(1, "At least one subject is required")
+});
+
+export type GradeCalculatorInput = z.infer<typeof gradeCalculatorSchema>;

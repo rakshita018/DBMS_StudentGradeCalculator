@@ -1,0 +1,318 @@
+import { useState, useEffect, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { RefreshCw, Settings } from "lucide-react";
+import { useStudents } from "@/hooks/use-student";
+import { getPercentile, getStudentRank, getRandomInt } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import Chart from "chart.js/auto";
+
+export default function Comparison() {
+  const { data: studentsData, isLoading } = useStudents();
+  const distributionChartRef = useRef<HTMLCanvasElement>(null);
+  const radarChartRef = useRef<HTMLCanvasElement>(null);
+  
+  const [selectedClass, setSelectedClass] = useState<string>("CSE 3rd Year");
+  const [selectedSubject, setSelectedSubject] = useState<string>("All Subjects");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("Current Semester");
+  
+  // Mock subject data (for demonstration purposes only)
+  const subjectData = [
+    { subject: "Mathematics", yourScore: 85, classAverage: 78, percentile: 80, rank: 12 },
+    { subject: "Data Structures", yourScore: 91, classAverage: 75, percentile: 95, rank: 3 },
+    { subject: "Operating Systems", yourScore: 73, classAverage: 70, percentile: 65, rank: 21 },
+    { subject: "Database Systems", yourScore: 88, classAverage: 82, percentile: 75, rank: 15 },
+    { subject: "Computer Networks", yourScore: 79, classAverage: 76, percentile: 60, rank: 24 }
+  ];
+
+  const overallStats = {
+    overall: "Overall",
+    yourScore: subjectData.reduce((sum, item) => sum + item.yourScore, 0) / subjectData.length,
+    classAverage: subjectData.reduce((sum, item) => sum + item.classAverage, 0) / subjectData.length,
+    percentile: 78,
+    rank: 13
+  };
+
+  useEffect(() => {
+    // Don't proceed if students data is not available or we're still loading
+    if (isLoading) return;
+    
+    // Setup distribution chart
+    if (distributionChartRef.current) {
+      const ctx = distributionChartRef.current.getContext('2d');
+      
+      if (ctx) {
+        // Destroy existing chart if it exists
+        const existingChart = Chart.getChart(distributionChartRef.current);
+        if (existingChart) {
+          existingChart.destroy();
+        }
+        
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['0-40', '41-50', '51-60', '61-70', '71-80', '81-90', '91-100'],
+            datasets: [{
+              label: 'Class Distribution',
+              data: [2, 5, 10, 15, 18, 8, 2],
+              backgroundColor: '#93C5FD'
+            }, {
+              label: 'Your Score',
+              data: [0, 0, 0, 0, 0, 5, 0],
+              backgroundColor: '#4F46E5'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                stacked: true
+              },
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+    }
+    
+    // Setup radar chart
+    if (radarChartRef.current) {
+      const ctx = radarChartRef.current.getContext('2d');
+      
+      if (ctx) {
+        // Destroy existing chart if it exists
+        const existingChart = Chart.getChart(radarChartRef.current);
+        if (existingChart) {
+          existingChart.destroy();
+        }
+        
+        new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: subjectData.map(item => item.subject),
+            datasets: [{
+              label: 'Your Scores',
+              data: subjectData.map(item => item.yourScore),
+              borderColor: '#4F46E5',
+              backgroundColor: 'rgba(79, 70, 229, 0.2)'
+            }, {
+              label: 'Class Average',
+              data: subjectData.map(item => item.classAverage),
+              borderColor: '#9CA3AF',
+              backgroundColor: 'rgba(156, 163, 175, 0.2)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false
+          }
+        });
+      }
+    }
+  }, [studentsData, isLoading, selectedClass, selectedSubject, selectedPeriod]);
+
+  // Handle filter changes
+  const handleClassChange = (value: string) => {
+    setSelectedClass(value);
+  };
+
+  const handleSubjectChange = (value: string) => {
+    setSelectedSubject(value);
+  };
+
+  const handlePeriodChange = (value: string) => {
+    setSelectedPeriod(value);
+  };
+
+  return (
+    <>
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Group Comparison</h1>
+          <div className="flex space-x-4">
+            <Button variant="default" size="sm" className="inline-flex items-center">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync Data
+            </Button>
+            <Button variant="outline" size="sm" className="inline-flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 py-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <Card className="shadow-md rounded-lg overflow-hidden">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Group Comparison</h2>
+              <p className="text-gray-600 mb-6">See how your performance compares to your peers in different subjects.</p>
+              
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="comparison-class" className="block text-sm font-medium text-gray-700">Class</label>
+                    <Select value={selectedClass} onValueChange={handleClassChange}>
+                      <SelectTrigger id="comparison-class" className="mt-1">
+                        <SelectValue placeholder="Select class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CSE 3rd Year">CSE 3rd Year</SelectItem>
+                        <SelectItem value="CSE 2nd Year">CSE 2nd Year</SelectItem>
+                        <SelectItem value="ECE 3rd Year">ECE 3rd Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label htmlFor="comparison-subject" className="block text-sm font-medium text-gray-700">Subject</label>
+                    <Select value={selectedSubject} onValueChange={handleSubjectChange}>
+                      <SelectTrigger id="comparison-subject" className="mt-1">
+                        <SelectValue placeholder="Select subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="All Subjects">All Subjects</SelectItem>
+                        <SelectItem value="Mathematics">Mathematics</SelectItem>
+                        <SelectItem value="Data Structures">Data Structures</SelectItem>
+                        <SelectItem value="Operating Systems">Operating Systems</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label htmlFor="comparison-period" className="block text-sm font-medium text-gray-700">Time Period</label>
+                    <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
+                      <SelectTrigger id="comparison-period" className="mt-1">
+                        <SelectValue placeholder="Select time period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Current Semester">Current Semester</SelectItem>
+                        <SelectItem value="Last Semester">Last Semester</SelectItem>
+                        <SelectItem value="All Time">All Time</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Performance Distribution</h3>
+                  <div className="h-64">
+                    {isLoading ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Skeleton className="w-full h-full" />
+                      </div>
+                    ) : (
+                      <canvas ref={distributionChartRef}></canvas>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Subject-wise Comparison</h3>
+                  <div className="h-64">
+                    {isLoading ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Skeleton className="w-full h-full" />
+                      </div>
+                    ) : (
+                      <canvas ref={radarChartRef}></canvas>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Your Position in Class</h3>
+                
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Your Score</TableHead>
+                        <TableHead>Class Average</TableHead>
+                        <TableHead>Percentile</TableHead>
+                        <TableHead>Rank</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subjectData.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{item.subject}</TableCell>
+                          <TableCell>{item.yourScore}%</TableCell>
+                          <TableCell>{item.classAverage}%</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span className="mr-2">{item.percentile}th</span>
+                              <div className="w-24 bg-gray-200 rounded-full h-2.5">
+                                <div 
+                                  className={`${item.percentile >= 75 ? 'bg-green-600' : 'bg-yellow-600'} h-2.5 rounded-full`} 
+                                  style={{ width: `${item.percentile}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{item.rank} of 60</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <tfoot className="bg-gray-50">
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">Overall</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{overallStats.yourScore.toFixed(1)}%</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{overallStats.classAverage.toFixed(1)}%</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center">
+                            <span className="mr-2">{overallStats.percentile}th</span>
+                            <div className="w-24 bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className="bg-green-600 h-2.5 rounded-full" 
+                                style={{ width: `${overallStats.percentile}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{overallStats.rank} of 60</td>
+                      </tr>
+                    </tfoot>
+                  </Table>
+                </div>
+                
+                <div className="mt-6 bg-indigo-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-indigo-900 mb-3">Performance Insights</h4>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <svg className="h-5 w-5 text-indigo-500 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <span className="ml-2 text-sm text-indigo-800">You're performing above class average in all subjects.</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="h-5 w-5 text-indigo-500 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <span className="ml-2 text-sm text-indigo-800">Your strongest performance is in Data Structures, where you're in the top 5% of the class.</span>
+                    </li>
+                    <li className="flex items-start">
+                      <svg className="h-5 w-5 text-indigo-500 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <span className="ml-2 text-sm text-indigo-800">Operating Systems and Computer Networks show potential for improvement to reach the same percentile as your other subjects.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+}

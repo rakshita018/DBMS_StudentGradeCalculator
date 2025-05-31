@@ -1,0 +1,275 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { RefreshCw, Settings } from "lucide-react";
+import { useState } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+export default function Gamified() {
+  const [level, setLevel] = useState(3);
+  const [xp, setXp] = useState(320);
+  const [xpToNextLevel, setXpToNextLevel] = useState(500);
+  const xpPercentage = (xp / xpToNextLevel) * 100;
+
+  // Mock active quests
+  const activeQuests = [
+    {
+      id: 1,
+      title: "Complete Practice Tests",
+      xp: 120,
+      description: "Complete 5 practice tests for your upcoming exams",
+      progress: 3,
+      total: 5
+    },
+    {
+      id: 2,
+      title: "Study Streak",
+      xp: 50,
+      description: "Study for 7 consecutive days",
+      progress: 5,
+      total: 7,
+      days: ["M", "T", "W", "T", "F", "S", "S"],
+      completed: [true, true, true, true, true, false, false]
+    },
+    {
+      id: 3,
+      title: "Grade Improvement",
+      xp: 200,
+      description: "Improve your grades in at least 3 subjects",
+      progress: 2,
+      total: 3
+    }
+  ];
+
+  // Mock achievements
+  const achievements = [
+    {
+      id: 1,
+      title: "Perfect Score",
+      description: "Score 100% on any test",
+      icon: "award",
+      isCompleted: true
+    },
+    {
+      id: 2,
+      title: "Bookworm",
+      description: "Study 20+ hours in a week",
+      icon: "book-reader",
+      isCompleted: true
+    },
+    {
+      id: 3,
+      title: "Fast Learner",
+      description: "Locked",
+      icon: "bolt",
+      isCompleted: false
+    },
+    {
+      id: 4,
+      title: "Team Player",
+      description: "Locked",
+      icon: "users",
+      isCompleted: false
+    }
+  ];
+
+  // Mock leaderboard
+  const leaderboard = [
+    { position: 1, name: "Alex J.", xp: 2450, isCurrentUser: false },
+    { position: 2, name: "Mira T.", xp: 2120, isCurrentUser: false },
+    { position: 3, name: "Sam P.", xp: 1890, isCurrentUser: false },
+    { position: 4, name: "You", xp: 1320, isCurrentUser: true }
+  ];
+
+  // Mock challenges
+  const challenges = [
+    {
+      id: 1,
+      title: "7-Day Study Challenge",
+      xp: 250,
+      description: "Study at least 3 hours every day for a week",
+      color: "indigo"
+    },
+    {
+      id: 2,
+      title: "Perfect Attendance",
+      xp: 150,
+      description: "Attend all classes for two weeks straight",
+      color: "green"
+    },
+    {
+      id: 3,
+      title: "Subject Mastery",
+      xp: 300,
+      description: "Score 90% or higher in all subjects",
+      color: "purple"
+    }
+  ];
+
+  return (
+    <>
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Gamified Mode</h1>
+          <div className="flex space-x-4">
+            <Button variant="default" size="sm" className="inline-flex items-center">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync Data
+            </Button>
+            <Button variant="outline" size="sm" className="inline-flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 py-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <Card className="shadow-md rounded-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Academic Adventure</h2>
+                  <p className="text-indigo-100">Level up your learning journey!</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-bold">Level {level}</div>
+                  <div className="text-sm text-indigo-200">Academic Explorer</div>
+                </div>
+              </div>
+              
+              <div className="mt-4 bg-indigo-700/40 rounded-lg p-3">
+                <div className="text-sm mb-1">Experience: {xp}/{xpToNextLevel} XP to Level {level + 1}</div>
+                <Progress value={xpPercentage} className="bg-indigo-900/50 h-2.5" indicatorClassName="bg-indigo-300" />
+              </div>
+            </div>
+            
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="col-span-1 md:col-span-2">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Current Quests</h3>
+                  
+                  <div className="space-y-4">
+                    {activeQuests.map(quest => (
+                      <div key={quest.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-gray-900">{quest.title}</h4>
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">{quest.xp} XP</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{quest.description}</p>
+                        <div className="mt-3">
+                          <div className="text-xs text-gray-500 mb-1">Progress: {quest.progress}/{quest.total} completed</div>
+                          <Progress 
+                            value={(quest.progress / quest.total) * 100} 
+                            className="bg-gray-200 h-2" 
+                            indicatorClassName={`bg-${quest.id === 1 ? 'yellow' : quest.id === 2 ? 'green' : 'blue'}-500`} 
+                          />
+                        </div>
+                        
+                        {quest.id === 2 && (
+                          <div className="mt-3 flex space-x-2">
+                            {quest.days.map((day, index) => (
+                              <div 
+                                key={index}
+                                className={`w-8 h-8 rounded-full ${quest.completed[index] ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'} flex items-center justify-center text-xs`}
+                              >
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="col-span-1">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Your Achievements</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {achievements.map(achievement => (
+                      <div 
+                        key={achievement.id}
+                        className={`border border-gray-200 rounded-lg p-3 text-center ${achievement.isCompleted ? 'bg-gray-50' : 'bg-gray-100 opacity-60'}`}
+                      >
+                        <div className={`w-12 h-12 rounded-full ${achievement.isCompleted ? `bg-purple-100 text-purple-600` : 'bg-gray-200 text-gray-400'} flex items-center justify-center mx-auto mb-2`}>
+                          <i className={`fas fa-${achievement.icon} text-xl`}></i>
+                        </div>
+                        <h4 className={`text-sm font-medium ${achievement.isCompleted ? 'text-gray-900' : 'text-gray-700'}`}>
+                          {achievement.title}
+                        </h4>
+                        <p className="text-xs text-gray-500">{achievement.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Leaderboard</h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <ul className="space-y-3">
+                        {leaderboard.map(user => (
+                          <li 
+                            key={user.position}
+                            className={`flex justify-between items-center px-3 py-2 ${
+                              user.position === 1 
+                                ? 'bg-yellow-50 border border-yellow-200' 
+                                : user.position === 2 
+                                  ? 'bg-gray-100 border border-gray-200' 
+                                  : user.position === 3 
+                                    ? 'bg-orange-50 border border-orange-200' 
+                                    : 'bg-blue-50 border border-blue-200'
+                            } rounded-lg`}
+                          >
+                            <div className="flex items-center">
+                              <div className={`font-medium ${
+                                user.position === 1 
+                                  ? 'text-yellow-800' 
+                                  : user.position === 2 
+                                    ? 'text-gray-800' 
+                                    : user.position === 3 
+                                      ? 'text-orange-800' 
+                                      : 'text-blue-800'
+                              }`}>{user.position}</div>
+                              <div className="ml-3">{user.name}</div>
+                            </div>
+                            <div className="text-sm font-semibold">{user.xp.toLocaleString()} XP</div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 border-t border-gray-200 pt-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Learning Challenges</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {challenges.map(challenge => (
+                    <div 
+                      key={challenge.id}
+                      className={`border border-${challenge.color}-200 rounded-lg p-4 bg-${challenge.color}-50`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <h4 className={`font-medium text-${challenge.color}-900`}>{challenge.title}</h4>
+                        <span className={`px-2 py-1 bg-${challenge.color}-100 text-${challenge.color}-800 text-xs rounded-full`}>{challenge.xp} XP</span>
+                      </div>
+                      <p className={`text-sm text-${challenge.color}-700 mt-2`}>{challenge.description}</p>
+                      <Button 
+                        className={`mt-4 w-full bg-${challenge.color}-600 text-white rounded-md py-2 text-sm font-medium hover:bg-${challenge.color}-700`}
+                      >
+                        Start Challenge
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+}

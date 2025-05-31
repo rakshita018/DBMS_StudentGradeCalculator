@@ -1,0 +1,283 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useMentalHealthTips } from "@/hooks/use-student";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshCw, Settings } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function MentalHealth() {
+  const { data: tips, isLoading } = useMentalHealthTips();
+
+  return (
+    <>
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Mental Health Tips</h1>
+          <div className="flex space-x-4">
+            <Button variant="default" size="sm" className="inline-flex items-center">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Sync Data
+            </Button>
+            <Button variant="outline" size="sm" className="inline-flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 py-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <Card className="shadow-md rounded-lg overflow-hidden">
+            <div className="relative h-48 overflow-hidden">
+              <img 
+                src="https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=400&q=80" 
+                alt="Mental wellness" 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/70 to-purple-600/70"></div>
+              <div className="absolute inset-0 flex items-center px-8">
+                <div className="text-white">
+                  <h2 className="text-2xl font-bold mb-2">Mental Health & Wellness</h2>
+                  <p className="text-lg opacity-90">Take care of your mind during academic stress</p>
+                </div>
+              </div>
+            </div>
+            
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="col-span-1 md:col-span-2">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Daily Wellness Tips</h3>
+                  
+                  <div className="space-y-6">
+                    {isLoading ? (
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <div key={index} className="bg-blue-50 p-4 rounded-lg">
+                          <Skeleton className="h-8 w-48 mb-2" />
+                          <Skeleton className="h-4 w-full mb-1" />
+                          <Skeleton className="h-4 w-3/4" />
+                        </div>
+                      ))
+                    ) : (
+                      tips?.map((tip) => {
+                        let bgColor = "bg-blue-50";
+                        let textColor = "text-blue-800";
+                        let descColor = "text-blue-700";
+                        let iconColor = "text-blue-500";
+                        
+                        if (tip.category === "Health") {
+                          bgColor = "bg-green-50";
+                          textColor = "text-green-800";
+                          descColor = "text-green-700";
+                          iconColor = "text-green-500";
+                        } else if (tip.category === "Social") {
+                          bgColor = "bg-orange-50";
+                          textColor = "text-orange-800";
+                          descColor = "text-orange-700";
+                          iconColor = "text-orange-500";
+                        } else if (tip.category === "Sleep") {
+                          bgColor = "bg-purple-50";
+                          textColor = "text-purple-800";
+                          descColor = "text-purple-700";
+                          iconColor = "text-purple-500";
+                        }
+                        
+                        return (
+                          <div key={tip.id} className={`${bgColor} p-4 rounded-lg`}>
+                            <div className="flex">
+                              <div className="flex-shrink-0">
+                                <i className={`fas fa-${tip.icon} text-2xl ${iconColor}`}></i>
+                              </div>
+                              <div className="ml-4">
+                                <h4 className={`text-lg font-medium ${textColor}`}>{tip.title}</h4>
+                                <p className={`mt-1 ${descColor}`}>{tip.content}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+                
+                <div className="col-span-1">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Quick Mood Checker</h3>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-gray-600 mb-4">How are you feeling today?</p>
+                    <div className="space-y-2">
+                      <Button variant="outline" className="w-full py-2 px-3 rounded bg-green-100 text-green-800 hover:bg-green-200 text-left justify-start">
+                        <i className="far fa-smile mr-2"></i> Great
+                      </Button>
+                      <Button variant="outline" className="w-full py-2 px-3 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 text-left justify-start">
+                        <i className="far fa-meh mr-2"></i> Okay
+                      </Button>
+                      <Button variant="outline" className="w-full py-2 px-3 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-left justify-start">
+                        <i className="far fa-frown mr-2"></i> Stressed
+                      </Button>
+                      <Button variant="outline" className="w-full py-2 px-3 rounded bg-red-100 text-red-800 hover:bg-red-200 text-left justify-start">
+                        <i className="far fa-sad-tear mr-2"></i> Not Good
+                      </Button>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <h4 className="font-medium text-gray-900 mb-2">Resources</h4>
+                      <ul className="space-y-2 text-sm">
+                        <li>
+                          <a href="#" className="text-blue-600 hover:text-blue-800">
+                            <i className="fas fa-external-link-alt mr-1"></i> Student Counseling Services
+                          </a>
+                        </li>
+                        <li>
+                          <a href="#" className="text-blue-600 hover:text-blue-800">
+                            <i className="fas fa-external-link-alt mr-1"></i> Meditation App Discount
+                          </a>
+                        </li>
+                        <li>
+                          <a href="#" className="text-blue-600 hover:text-blue-800">
+                            <i className="fas fa-external-link-alt mr-1"></i> Academic Stress Management Guide
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6">
+                    <div className="bg-indigo-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-indigo-900 mb-2">Stress Management Techniques</h4>
+                      <Button variant="outline" className="w-full text-left p-2 bg-white rounded shadow-sm hover:bg-indigo-100 mb-2 justify-start">
+                        <i className="fas fa-play-circle mr-2 text-indigo-600"></i> 5-Min Guided Breathing
+                      </Button>
+                      <Button variant="outline" className="w-full text-left p-2 bg-white rounded shadow-sm hover:bg-indigo-100 justify-start">
+                        <i className="fas fa-play-circle mr-2 text-indigo-600"></i> Quick Mindfulness Exercise
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-8 border-t border-gray-200 pt-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Weekly Wellness Planner</h3>
+                <p className="text-gray-600 mb-4">Balance your academic work with activities that support your mental well-being</p>
+                
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Day</TableHead>
+                        <TableHead>Study Hours</TableHead>
+                        <TableHead>Physical Activity</TableHead>
+                        <TableHead>Social Time</TableHead>
+                        <TableHead>Mindfulness</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="font-medium">Monday</TableCell>
+                        <TableCell>
+                          <Input type="number" className="w-16 rounded p-1" defaultValue={4} />
+                        </TableCell>
+                        <TableCell>
+                          <Select defaultValue="Walk">
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Select activity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Walk">Walk</SelectItem>
+                              <SelectItem value="Gym">Gym</SelectItem>
+                              <SelectItem value="Yoga">Yoga</SelectItem>
+                              <SelectItem value="None">None</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select defaultValue="None">
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Select activity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="None">None</SelectItem>
+                              <SelectItem value="Coffee">Coffee with friends</SelectItem>
+                              <SelectItem value="Study">Study group</SelectItem>
+                              <SelectItem value="Call">Call family</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select defaultValue="None">
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Select activity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="None">None</SelectItem>
+                              <SelectItem value="Meditation">Meditation</SelectItem>
+                              <SelectItem value="Breathing">Deep breathing</SelectItem>
+                              <SelectItem value="Journaling">Journaling</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="font-medium">Tuesday</TableCell>
+                        <TableCell>
+                          <Input type="number" className="w-16 rounded p-1" defaultValue={5} />
+                        </TableCell>
+                        <TableCell>
+                          <Select defaultValue="Gym">
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Select activity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="None">None</SelectItem>
+                              <SelectItem value="Gym">Gym</SelectItem>
+                              <SelectItem value="Yoga">Yoga</SelectItem>
+                              <SelectItem value="Walk">Walk</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select defaultValue="Study">
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Select activity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="None">None</SelectItem>
+                              <SelectItem value="Coffee">Coffee with friends</SelectItem>
+                              <SelectItem value="Study">Study group</SelectItem>
+                              <SelectItem value="Call">Call family</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select defaultValue="Meditation">
+                            <SelectTrigger className="w-[150px]">
+                              <SelectValue placeholder="Select activity" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="None">None</SelectItem>
+                              <SelectItem value="Meditation">Meditation</SelectItem>
+                              <SelectItem value="Breathing">Deep breathing</SelectItem>
+                              <SelectItem value="Journaling">Journaling</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                <div className="mt-4 flex justify-end">
+                  <Button className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700">
+                    Save Wellness Plan
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+}
